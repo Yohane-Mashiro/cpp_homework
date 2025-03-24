@@ -7,7 +7,7 @@
 class DList_plus:public DList{
     public:
         using DList::DList;
-        ~DList_plus() { /* 不需要额外操作，基类析构函数会被自动调用 */ }
+        ~DList_plus() {}
         // 拷贝构造函数
         DList_plus(const DList_plus& other);
         // 赋值运算符重载
