@@ -1,5 +1,5 @@
 #include <iostream>
-#include "head/SList.h"
+#include "include/SList.h"
 
 // 测试程序
 int main() {

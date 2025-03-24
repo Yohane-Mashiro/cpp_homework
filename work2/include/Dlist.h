@@ -33,7 +33,7 @@ public:
     
     // 打印线性表
     void display() const;
-private:
+protected:
     struct Node {
         int data;
         Node *prev;
