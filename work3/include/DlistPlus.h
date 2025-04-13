@@ -1,7 +1,7 @@
 #ifndef DLIST_PLUS_H
 #define DLIST_PLUS_H
 
-#include "/home/yohane-mashiro/cpp_homework/work2/include/Dlist.h"
+#include "/work2/include/Dlist.h"
 //如需使用自行修改路径
 
 class DList_plus:public DList{
