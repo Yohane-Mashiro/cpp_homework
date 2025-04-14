@@ -103,7 +103,6 @@ void testDecimalOperations() {
 }
 
 int main() {
-    std::cout << "BigInteger 类测试程序\n";
     
     // 测试基本操作
     testOperation("123", "456");         // 正数与正数
@@ -111,6 +110,7 @@ int main() {
     testOperation("123", "-456");        // 正数与负数
     testOperation("-123", "-456");       // 负数与负数
     testOperation("0", "123");           // 零与非零
+    testOperation("1.23","4");         // 小数与整数
     testOperation("123456789", "987654321");  // 大数测试
     
     // 测试输入输出
@@ -119,7 +119,7 @@ int main() {
     // 测试大数计算
     testLargeNumbers();
     
-    // 添加小数测试
+    // 小数测试
     testDecimalOperations();
     
     return 0;

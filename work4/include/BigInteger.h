@@ -301,27 +301,30 @@ BigInteger BigInteger::operator/(const BigInteger& other) const {
     BigInteger a = *this;
     BigInteger b = other;
     
-    // 通过移动小数点使除数变为整数
-    size_t totalDecimalPlaces = decimalPlaces + 4;  // 保留4位小数精度
+    // 计算结果的小数位数
+    // 结果的小数位 = 被除数的小数位 - 除数的小数位 + 额外精度
+    size_t extraPrecision = 4;  // 额外精度
+    size_t resultDecimalPlaces = a.decimalPlaces + extraPrecision;
     
-    // 将被除数和除数都变成整数
+    // 将除数转为整数
     while (b.decimalPlaces > 0) {
-        a.digits.insert(a.digits.begin(), 0);  // 被除数补零
-        b.digits.pop_back();                   // 除数去掉小数位
+        a.digits.insert(a.digits.begin(), 0);  // 被除数相应左移
         b.decimalPlaces--;
     }
     
-    // 补充额外的精度
-    for (size_t i = 0; i < totalDecimalPlaces; i++) {
+    // 补充额外的精度位
+    for (size_t i = 0; i < extraPrecision; i++) {
         a.digits.insert(a.digits.begin(), 0);
     }
 
-    // 使用整数除法算法
     BigInteger quotient;
     quotient.digits.clear();
     quotient.isNegative = isNegative != other.isNegative;
     
     BigInteger remainder;
+    remainder.digits.clear();
+    
+    // 执行除法运算
     for (int i = a.digits.size() - 1; i >= 0; i--) {
         remainder.digits.insert(remainder.digits.begin(), a.digits[i]);
         remainder.removeLeadingZeros();
@@ -330,7 +333,7 @@ BigInteger BigInteger::operator/(const BigInteger& other) const {
         BigInteger temp = b;
         temp.isNegative = false;
         
-        while (!(remainder < temp)) {
+        while (!(remainder < temp) && remainder.digits.size() > 0) {
             remainder = remainder - temp;
             q++;
         }
@@ -342,8 +345,8 @@ BigInteger BigInteger::operator/(const BigInteger& other) const {
     std::reverse(quotient.digits.begin(), quotient.digits.end());
     quotient.removeLeadingZeros();
     
-    // 设置小数位数
-    quotient.decimalPlaces = totalDecimalPlaces;
+    // 设置正确的小数位数
+    quotient.decimalPlaces = resultDecimalPlaces;
     quotient.removeTrailingZeros();
     
     return quotient;
@@ -373,15 +376,30 @@ bool BigInteger::operator<(const BigInteger& other) const {
         return isNegative;
     }
     
+    // 对齐小数点进行比较
+    BigInteger a = *this;
+    BigInteger b = other;
+    
+    // 补齐小数位
+    size_t maxDecimalPlaces = std::max(a.decimalPlaces, b.decimalPlaces);
+    while (a.decimalPlaces < maxDecimalPlaces) {
+        a.digits.insert(a.digits.begin(), 0);
+        a.decimalPlaces++;
+    }
+    while (b.decimalPlaces < maxDecimalPlaces) {
+        b.digits.insert(b.digits.begin(), 0);
+        b.decimalPlaces++;
+    }
+    
     // 如果都是负数，则比较绝对值（绝对值大的实际上更小）
     if (isNegative) {
-        if (digits.size() != other.digits.size()) {
-            return digits.size() > other.digits.size();
+        if (a.digits.size() != b.digits.size()) {
+            return a.digits.size() > b.digits.size();
         }
         
-        for (int i = digits.size() - 1; i >= 0; --i) {
-            if (digits[i] != other.digits[i]) {
-                return digits[i] > other.digits[i];
+        for (int i = a.digits.size() - 1; i >= 0; --i) {
+            if (a.digits[i] != b.digits[i]) {
+                return a.digits[i] > b.digits[i];
             }
         }
         
@@ -389,13 +407,13 @@ bool BigInteger::operator<(const BigInteger& other) const {
     }
     
     // 如果都是正数，直接比较
-    if (digits.size() != other.digits.size()) {
-        return digits.size() < other.digits.size();
+    if (a.digits.size() != b.digits.size()) {
+        return a.digits.size() < b.digits.size();
     }
     
-    for (int i = digits.size() - 1; i >= 0; --i) {
-        if (digits[i] != other.digits[i]) {
-            return digits[i] < other.digits[i];
+    for (int i = a.digits.size() - 1; i >= 0; --i) {
+        if (a.digits[i] != b.digits[i]) {
+            return a.digits[i] < b.digits[i];
         }
     }
     
