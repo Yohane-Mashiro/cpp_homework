@@ -61,6 +61,47 @@ void testLargeNumbers() {
     std::cout << large1 << " + " << large2 << " = " << (large1 + large2) << std::endl;
 }
 
+// 添加测试小数运算的函数
+void testDecimalOperations() {
+    std::cout << "\n===== 测试小数运算 =====\n";
+    
+    // 测试基本小数
+    BigInteger num1("123.456");
+    BigInteger num2("78.90");
+    std::cout << "基本小数运算:\n";
+    std::cout << num1 << " + " << num2 << " = " << (num1 + num2) << std::endl;
+    std::cout << num1 << " - " << num2 << " = " << (num1 - num2) << std::endl;
+    std::cout << num1 << " * " << num2 << " = " << (num1 * num2) << std::endl;
+    std::cout << num1 << " / " << num2 << " = " << (num1 / num2) << std::endl;
+    
+    // 测试不同精度小数
+    BigInteger num3("1.23456");
+    BigInteger num4("2.1");
+    std::cout << "\n不同精度小数运算:\n";
+    std::cout << num3 << " + " << num4 << " = " << (num3 + num4) << std::endl;
+    
+    // 测试四舍五入
+    BigInteger num5("3.14159");
+    std::cout << "\n四舍五入测试:\n";
+    std::cout << "原数: " << num5 << std::endl;
+    num5.roundToPlaces(2);
+    std::cout << "保留2位小数: " << num5 << std::endl;
+    
+    // 测试设置小数位数
+    BigInteger num6("1.5");
+    std::cout << "\n设置小数位数测试:\n";
+    std::cout << "原数: " << num6 << std::endl;
+    num6.setDecimalPlaces(3);
+    std::cout << "设置3位小数: " << num6 << std::endl;
+    
+    // 测试负数小数
+    BigInteger num7("-12.34");
+    BigInteger num8("5.67");
+    std::cout << "\n负数小数运算:\n";
+    std::cout << num7 << " + " << num8 << " = " << (num7 + num8) << std::endl;
+    std::cout << num7 << " * " << num8 << " = " << (num7 * num8) << std::endl;
+}
+
 int main() {
     std::cout << "BigInteger 类测试程序\n";
     
@@ -77,6 +118,9 @@ int main() {
     
     // 测试大数计算
     testLargeNumbers();
+    
+    // 添加小数测试
+    testDecimalOperations();
     
     return 0;
 }

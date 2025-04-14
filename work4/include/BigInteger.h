@@ -26,17 +26,23 @@ class BigInteger {
         friend std::ostream& operator<<(std::ostream& os, const BigInteger& bigInt);
         friend std::istream& operator>>(std::istream& is, BigInteger& bigInt);
 
+        void setDecimalPlaces(size_t places);
+        size_t getDecimalPlaces() const;
+        void roundToPlaces(size_t places);
+
     private:
-        std::vector<int> digits;  // 存储数字，个位在前（反向存储便于计算）
-        bool isNegative;          // 表示正负
+        std::vector<int> digits; // 存储数字的反向表示
+        bool isNegative;           // 表示正负
+        size_t decimalPlaces;      // 小数位数
         void removeLeadingZeros(); // 移除前导零
+        void removeTrailingZeros(); // 移除尾部多余的零
 };
 
-BigInteger::BigInteger() : isNegative(false) {
+BigInteger::BigInteger() : isNegative(false), decimalPlaces(0) {
     digits.push_back(0); // 默认值为0
 }
 
-BigInteger::BigInteger(const char* str) : isNegative(false) {
+BigInteger::BigInteger(const char* str) : isNegative(false), decimalPlaces(0) {
     if (str == nullptr || str[0] == '\0') {
         digits.push_back(0);
         return;
@@ -50,8 +56,19 @@ BigInteger::BigInteger(const char* str) : isNegative(false) {
         start = 1;
     }
 
-    // 反向存储，从字符串末尾开始读取
-    for (int i = std::strlen(str) - 1; i >= start; --i) {
+    // 查找小数点位置
+    const char* decimalPoint = strchr(str + start, '.');
+    size_t decimalPos = 0;
+    
+    if (decimalPoint != nullptr) {
+        decimalPos = decimalPoint - str;
+        decimalPlaces = strlen(decimalPoint + 1);
+    }
+
+    // 反向存储数字部分
+    for (int i = strlen(str) - 1; i >= start; --i) {
+        if (str[i] == '.') continue;
+        
         if (str[i] >= '0' && str[i] <= '9') {
             digits.push_back(str[i] - '0');
         } else {
@@ -59,20 +76,21 @@ BigInteger::BigInteger(const char* str) : isNegative(false) {
             digits.clear();
             digits.push_back(0);
             isNegative = false;
+            decimalPlaces = 0;
             return;
         }
     }
 
-    // 移除前导零
     removeLeadingZeros();
+    removeTrailingZeros();
     
-    // 如果是0，确保它是正数
     if (digits.size() == 1 && digits[0] == 0) {
         isNegative = false;
+        decimalPlaces = 0;
     }
 }
 
-BigInteger::BigInteger(const BigInteger& other) : digits(other.digits), isNegative(other.isNegative) {
+BigInteger::BigInteger(const BigInteger& other) : digits(other.digits), isNegative(other.isNegative), decimalPlaces(other.decimalPlaces) {
 }
 
 BigInteger::~BigInteger() {
@@ -85,10 +103,18 @@ void BigInteger::removeLeadingZeros() {
     }
 }
 
+void BigInteger::removeTrailingZeros() {
+    while (decimalPlaces > 0 && !digits.empty() && digits[0] == 0) {
+        digits.erase(digits.begin());
+        --decimalPlaces;
+    }
+}
+
 BigInteger& BigInteger::operator=(const BigInteger& other) {
     if (this != &other) {
         digits = other.digits;
         isNegative = other.isNegative;
+        decimalPlaces = other.decimalPlaces;
     }
     return *this;
 }
@@ -103,22 +129,50 @@ BigInteger BigInteger::operator+(const BigInteger& other) const {
 
     BigInteger result;
     result.digits.clear();
-    result.isNegative = isNegative; // 结果符号与原数相同
+    result.isNegative = isNegative; // 保持符号一致
+
+    // 对齐小数点
+    size_t maxDecimalPlaces = std::max(decimalPlaces, other.decimalPlaces);
+    BigInteger a = *this;
+    BigInteger b = other;
+    
+    // 补齐小数位
+    while (a.decimalPlaces < maxDecimalPlaces) {
+        a.digits.insert(a.digits.begin(), 0);
+        a.decimalPlaces++;
+    }
+    while (b.decimalPlaces < maxDecimalPlaces) {
+        b.digits.insert(b.digits.begin(), 0);
+        b.decimalPlaces++;
+    }
 
     int carry = 0;
-    size_t i = 0, j = 0;
+    size_t maxLen = std::max(a.digits.size(), b.digits.size());
+    
+    // 确保两个数字长度相同
+    while (a.digits.size() < maxLen) a.digits.push_back(0);
+    while (b.digits.size() < maxLen) b.digits.push_back(0);
 
     // 逐位相加
-    while (i < digits.size() || j < other.digits.size() || carry) {
+    for (size_t i = 0; i < maxLen || carry; ++i) {
         int sum = carry;
-        if (i < digits.size()) sum += digits[i++];
-        if (j < other.digits.size()) sum += other.digits[j++];
+        if (i < a.digits.size()) sum += a.digits[i];
+        if (i < b.digits.size()) sum += b.digits[i];
         
         result.digits.push_back(sum % 10);
         carry = sum / 10;
     }
 
+    result.decimalPlaces = maxDecimalPlaces;
     result.removeLeadingZeros();
+    result.removeTrailingZeros();
+
+    // 特殊情况：如果结果为0
+    if (result.digits.size() == 1 && result.digits[0] == 0) {
+        result.isNegative = false;
+        result.decimalPlaces = 0;
+    }
+
     return result;
 }
 
@@ -130,16 +184,27 @@ BigInteger BigInteger::operator-(const BigInteger& other) const {
         return *this + temp;
     }
 
+    // 对齐小数点
+    size_t maxDecimalPlaces = std::max(decimalPlaces, other.decimalPlaces);
+    BigInteger a = *this;
+    BigInteger b = other;
+    
+    // 补齐小数位
+    while (a.decimalPlaces < maxDecimalPlaces) {
+        a.digits.insert(a.digits.begin(), 0);
+        a.decimalPlaces++;
+    }
+    while (b.decimalPlaces < maxDecimalPlaces) {
+        b.digits.insert(b.digits.begin(), 0);
+        b.decimalPlaces++;
+    }
+
     // 比较绝对值大小
-    bool thisLarger = true;
-    if (digits.size() < other.digits.size()) {
-        thisLarger = false;
-    } else if (digits.size() == other.digits.size()) {
-        for (int i = digits.size() - 1; i >= 0; --i) {
-            if (digits[i] < other.digits[i]) {
-                thisLarger = false;
-                break;
-            } else if (digits[i] > other.digits[i]) {
+    bool thisLarger = (a.digits.size() > b.digits.size());
+    if (a.digits.size() == b.digits.size()) {
+        for (int i = a.digits.size() - 1; i >= 0; --i) {
+            if (a.digits[i] != b.digits[i]) {
+                thisLarger = (a.digits[i] > b.digits[i]);
                 break;
             }
         }
@@ -147,38 +212,45 @@ BigInteger BigInteger::operator-(const BigInteger& other) const {
 
     BigInteger result;
     result.digits.clear();
+    result.decimalPlaces = maxDecimalPlaces;
 
-    // 确定结果的符号和计算顺序
-    const std::vector<int>& larger = thisLarger ? digits : other.digits;
-    const std::vector<int>& smaller = thisLarger ? other.digits : digits;
+    // 确保被减数大于减数
+    const std::vector<int>& larger = thisLarger ? a.digits : b.digits;
+    const std::vector<int>& smaller = thisLarger ? b.digits : a.digits;
+    
+    // 确定结果的符号
     result.isNegative = isNegative ? thisLarger : !thisLarger;
 
     int borrow = 0;
-    size_t i = 0, j = 0;
+    
+    // 确保两个数字长度相同
+    std::vector<int> largerDigits = larger;
+    std::vector<int> smallerDigits = smaller;
+    while (smallerDigits.size() < largerDigits.size()) {
+        smallerDigits.push_back(0);
+    }
 
     // 逐位相减
-    while (i < larger.size()) {
-        int diff = larger[i] - borrow;
-        if (j < smaller.size()) diff -= smaller[j++];
-        
+    for (size_t i = 0; i < largerDigits.size(); ++i) {
+        int diff = largerDigits[i] - borrow - smallerDigits[i];
         if (diff < 0) {
             diff += 10;
             borrow = 1;
         } else {
             borrow = 0;
         }
-        
         result.digits.push_back(diff);
-        i++;
     }
 
     result.removeLeadingZeros();
-    
-    // 如果结果是0，确保它是正数
+    result.removeTrailingZeros();
+
+    // 如果结果为0
     if (result.digits.size() == 1 && result.digits[0] == 0) {
         result.isNegative = false;
+        result.decimalPlaces = 0;
     }
-    
+
     return result;
 }
 
@@ -186,21 +258,29 @@ BigInteger BigInteger::operator*(const BigInteger& other) const {
     BigInteger result;
     result.digits.assign(digits.size() + other.digits.size(), 0);
     result.isNegative = isNegative != other.isNegative;
+    
+    // 计算结果的小数位数应该是两个操作数小数位数之和
+    result.decimalPlaces = decimalPlaces + other.decimalPlaces;
 
+    // 执行乘法运算
     for (size_t i = 0; i < digits.size(); i++) {
         int carry = 0;
         for (size_t j = 0; j < other.digits.size() || carry; j++) {
-            int current = result.digits[i + j] + digits[i] * (j < other.digits.size() ? other.digits[j] : 0) + carry;
+            int current = result.digits[i + j] + 
+                         digits[i] * (j < other.digits.size() ? other.digits[j] : 0) + 
+                         carry;
             result.digits[i + j] = current % 10;
             carry = current / 10;
         }
     }
 
     result.removeLeadingZeros();
+    result.removeTrailingZeros();
     
-    // 如果结果是0，确保它是正数
+    // 如果结果是0，确保它是正数且没有小数位
     if (result.digits.size() == 1 && result.digits[0] == 0) {
         result.isNegative = false;
+        result.decimalPlaces = 0;
     }
     
     return result;
@@ -217,50 +297,60 @@ BigInteger BigInteger::operator/(const BigInteger& other) const {
         return BigInteger();
     }
 
-    // 简单实现：反复减法
-    BigInteger absThis = *this;
-    absThis.isNegative = false;
+    // 将小数转换为整数进行运算
+    BigInteger a = *this;
+    BigInteger b = other;
     
-    BigInteger absOther = other;
-    absOther.isNegative = false;
+    // 通过移动小数点使除数变为整数
+    size_t totalDecimalPlaces = decimalPlaces + 4;  // 保留4位小数精度
     
-    // 如果被除数小于除数，结果为0
-    if (absThis < absOther) {
-        return BigInteger();
+    // 将被除数和除数都变成整数
+    while (b.decimalPlaces > 0) {
+        a.digits.insert(a.digits.begin(), 0);  // 被除数补零
+        b.digits.pop_back();                   // 除数去掉小数位
+        b.decimalPlaces--;
+    }
+    
+    // 补充额外的精度
+    for (size_t i = 0; i < totalDecimalPlaces; i++) {
+        a.digits.insert(a.digits.begin(), 0);
     }
 
+    // 使用整数除法算法
     BigInteger quotient;
     quotient.digits.clear();
     quotient.isNegative = isNegative != other.isNegative;
     
-    // 从最高位开始处理
-    BigInteger temp;
-    std::string quotStr = "";
-    
-    for (int i = absThis.digits.size() - 1; i >= 0; i--) {
-        // 将当前位加入临时结果的末尾
-        temp.digits.insert(temp.digits.begin(), absThis.digits[i]);
-        temp.removeLeadingZeros();
+    BigInteger remainder;
+    for (int i = a.digits.size() - 1; i >= 0; i--) {
+        remainder.digits.insert(remainder.digits.begin(), a.digits[i]);
+        remainder.removeLeadingZeros();
         
-        // 计算当前位可以减去多少个除数
         int q = 0;
-        while (!(temp < absOther)) {
-            temp = temp - absOther;
+        BigInteger temp = b;
+        temp.isNegative = false;
+        
+        while (!(remainder < temp)) {
+            remainder = remainder - temp;
             q++;
         }
         
-        quotStr = std::to_string(q) + quotStr;
+        quotient.digits.push_back(q);
     }
     
-    // 将结果转换回 BigInteger
-    BigInteger finalQuotient(quotStr.c_str());
-    finalQuotient.isNegative = quotient.isNegative;
+    // 反转结果
+    std::reverse(quotient.digits.begin(), quotient.digits.end());
+    quotient.removeLeadingZeros();
     
-    return finalQuotient;
+    // 设置小数位数
+    quotient.decimalPlaces = totalDecimalPlaces;
+    quotient.removeTrailingZeros();
+    
+    return quotient;
 }
 
 bool BigInteger::operator==(const BigInteger& other) const {
-    if (isNegative != other.isNegative || digits.size() != other.digits.size()) {
+    if (isNegative != other.isNegative || digits.size() != other.digits.size() || decimalPlaces != other.decimalPlaces) {
         return false;
     }
     
@@ -316,6 +406,50 @@ bool BigInteger::operator>(const BigInteger& other) const {
     return other < *this;
 }
 
+void BigInteger::setDecimalPlaces(size_t places) {
+    if (places > decimalPlaces) {
+        // 需要补零
+        size_t zerosToAdd = places - decimalPlaces;
+        for (size_t i = 0; i < zerosToAdd; ++i) {
+            digits.insert(digits.begin(), 0);
+        }
+    } else if (places < decimalPlaces) {
+        // 需要截断或四舍五入
+        roundToPlaces(places);
+    }
+    decimalPlaces = places;
+}
+
+size_t BigInteger::getDecimalPlaces() const {
+    return decimalPlaces;
+}
+
+void BigInteger::roundToPlaces(size_t places) {
+    if (places >= decimalPlaces) return;
+    
+    // 判断需要四舍五入的位
+    if (places < decimalPlaces && places < digits.size()) {
+        if (digits[decimalPlaces - places - 1] >= 5) {
+            // 进位
+            int carry = 1;
+            size_t pos = decimalPlaces - places;
+            while (pos < digits.size() && carry) {
+                digits[pos] += carry;
+                carry = digits[pos] / 10;
+                digits[pos] %= 10;
+                ++pos;
+            }
+            if (carry) digits.push_back(1);
+        }
+    }
+
+    // 移除多余的小数位
+    if (decimalPlaces > places) {
+        digits.erase(digits.begin(), digits.begin() + (decimalPlaces - places));
+        decimalPlaces = places;
+    }
+}
+
 std::ostream& operator<<(std::ostream& os, const BigInteger& bigInt) {
     if (bigInt.digits.empty()) {
         os << "0";
@@ -326,9 +460,34 @@ std::ostream& operator<<(std::ostream& os, const BigInteger& bigInt) {
         os << "-";
     }
     
-    // 输出时反向输出，因为存储是反向的
-    for (int i = bigInt.digits.size() - 1; i >= 0; --i) {
-        os << bigInt.digits[i];
+    size_t totalSize = bigInt.digits.size();
+    
+    // 如果没有小数部分
+    if (bigInt.decimalPlaces == 0) {
+        for (int i = totalSize - 1; i >= 0; --i) {
+            os << bigInt.digits[i];
+        }
+        return os;
+    }
+    
+    // 处理有小数部分的情况
+    size_t integerPartSize = totalSize - bigInt.decimalPlaces;
+    
+    // 输出整数部分
+    if (integerPartSize == 0) {
+        os << "0";
+    } else {
+        for (int i = totalSize - 1; i >= bigInt.decimalPlaces; --i) {
+            os << bigInt.digits[i];
+        }
+    }
+    
+    // 输出小数部分
+    if (bigInt.decimalPlaces > 0) {
+        os << ".";
+        for (int i = bigInt.decimalPlaces - 1; i >= 0; --i) {
+            os << bigInt.digits[i];
+        }
     }
     
     return os;
