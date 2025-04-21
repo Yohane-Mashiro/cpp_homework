@@ -9,9 +9,9 @@ int main() {
 
     // 测试入队操作
     std::cout << "\n===== 测试入队操作 =====" << std::endl;
-    queue.enqueue(10);
-    queue.enqueue(20);
-    queue.enqueue(30);
+    queue.Insert(10);
+    queue.Insert(20);
+    queue.Insert(30);
     queue.display();
 
     // 测试获取队头元素
@@ -22,7 +22,7 @@ int main() {
 
     // 测试出队操作
     std::cout << "\n===== 测试出队操作 =====" << std::endl;
-    if (queue.dequeue(e)) {
+    if (queue.Delete(e)) {
         std::cout << "出队元素是：" << e << std::endl;
     }
     queue.display();

@@ -33,6 +33,11 @@ public:
     
     // 打印线性表
     void display() const;
+
+    // 添加与插入位置无关的纯虚函数 work6要用
+    virtual bool Insert(int e) = 0;
+    virtual bool Delete(int &e) = 0;
+
 protected:
     struct Node {
         int data;

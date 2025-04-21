@@ -7,29 +7,20 @@ class DQueue:public DList{
         DQueue(); // 构造函数
         using DList::DList;
         ~DQueue() {}
-        // 入队
-        bool enqueue(int e);
-        // 出队
-        bool dequeue(int &e);
         // 获取队头元素
         bool front(int &e) const;
         // 判断队列是否为空
         bool isEmpty() const;
         // 获取队列的大小
         int size() const;
+        
+        // 实现基类的纯虚函数
+        bool Insert(int e) override; // 对应入队操作
+        bool Delete(int &e) override; // 对应出队操作
 };
 
 DQueue::DQueue() : DList() {}
-bool DQueue::enqueue(int e) {
-    return insert(size() + 1, e); // 在尾部插入元素
-}
-bool DQueue::dequeue(int &e) {
-    if (isEmpty()) {
-        std::cout << "队列为空，无法出队！" << std::endl;
-        return false;
-    }
-    return remove(1, e); // 删除头部元素
-}
+
 bool DQueue::front(int &e) const {
     if (isEmpty()) {
         std::cout << "队列为空，无法获取队头元素！" << std::endl;
@@ -42,5 +33,17 @@ bool DQueue::isEmpty() const {
 }
 int DQueue::size() const {
     return DList::size(); // 调用基类的size方法
+}
+
+bool DQueue::Insert(int e) {
+    return insert(size() + 1, e);
+}
+
+bool DQueue::Delete(int &e) {
+    if (isEmpty()) {
+        std::cout << "队列为空，无法出队！" << std::endl;
+        return false;
+    }
+    return remove(1, e);
 }
 #endif
